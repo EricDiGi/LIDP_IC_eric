@@ -1,18 +1,25 @@
 package com.lidp.fare.service;
 
+import com.lidp.fare.dao.FareRepository;
+import com.lidp.fare.domain.Fare;
+import com.lidp.fare.domain.FareId;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-import com.lidp.fare.dao.FareRepository;
-import com.lidp.fare.domain.Fare;
-import com.lidp.fare.domain.FareId;
-
+@RestController
 public class FareService
 {
    private static final Logger logger = Logger.getLogger(FareService.class.getName());
 
+   @Autowired
    private final FareRepository fareRepository;
 
    public FareService(FareRepository fareRepository)
@@ -20,11 +27,13 @@ public class FareService
       this.fareRepository = fareRepository;
    }
 
+   @GetMapping("/fares")
    public Iterable<Fare> getFares()
    {
       return fareRepository.findAll();
    }
 
+   @GetMapping("/fare")
    public double getFare(Instant departureTime, double distanceMi, int seatRow)
    {
       // check if fare has already been calculated
@@ -58,7 +67,8 @@ public class FareService
       }
    }
 
-   private double calculateFare(Instant departureTime, double distanceMi, int seatRow)
+   @PostMapping("/farecalc")
+   private double calculateFare(@RequestBody Instant departureTime, @RequestBody double distanceMi, @RequestBody int seatRow)
    {
       // the higher the service level (based on the seat row), the higher the base rate
       double baseRate = getBaseRate(seatRow);
@@ -73,7 +83,8 @@ public class FareService
       return baseRate + distanceFee + departureTimeFee;
    }
 
-   private double getBaseRate(int seatPosition)
+   @PostMapping("/baserates")
+   private double getBaseRate(@RequestBody int seatPosition)
    {
       if (seatPosition < 4)
       {

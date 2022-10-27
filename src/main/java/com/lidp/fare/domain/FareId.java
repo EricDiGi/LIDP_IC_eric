@@ -15,6 +15,12 @@ public class FareId implements Serializable
       // Default constructor
    }
 
+   public FareId(Fare fare){
+      this.departureTime = fare.getDepartureTime();
+      this.distanceMi = fare.getDistanceMi();
+      this.seatRow = fare.getSeatRow();
+   }
+
    public FareId(Instant departureTime, double distanceMi, int seatRow)
    {
       this.departureTime = departureTime;
