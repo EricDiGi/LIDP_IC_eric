@@ -11,9 +11,9 @@ public class Fare
    private double distanceMi;
    private int seatRow;
    private double cost;
-   private @Id int id;
+   private @Id FareId id;
 
-   public Fare() {this.id = new FareId().hashCode();}
+   public Fare() {this.id = new FareId();}
 
    public Fare(Instant departureTime, double distanceMi, int seatRow, double cost){
       this.setCost(cost);
@@ -64,10 +64,10 @@ public class Fare
    }
 
    public void generateId(){
-      this.id = new FareId(this.departureTime,this.distanceMi, this.seatRow).hashCode();
+      this.id = new FareId(this.departureTime,this.distanceMi, this.seatRow);
    }
 
-   public int getId(){
+   public FareId getId(){
       return this.id;
    }
 

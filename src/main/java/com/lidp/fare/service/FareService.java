@@ -4,10 +4,8 @@ import com.lidp.fare.dao.FareRepository;
 import com.lidp.fare.domain.Fare;
 import com.lidp.fare.domain.FareId;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,6 +19,7 @@ public class FareService
 
    @Autowired
    private final FareRepository fareRepository;
+   private boolean persist = true;
 
    public FareService(FareRepository fareRepository)
    {
@@ -51,12 +50,13 @@ public class FareService
       else
       {
          // else calculate it and persist the result
-         double cost = calculateFare(departureTime, distanceMi, seatRow);
+         //double cost = calculateFare(departureTime, distanceMi, seatRow);
 
          Fare fare = new Fare();
          fare.setDepartureTime(departureTime);
          fare.setDistanceMi(distanceMi);
          fare.setSeatRow(seatRow);
+         double cost = calculateFareNoPersist(fare);
          fare.setCost(cost);
 
          fareRepository.save(fare);
@@ -67,24 +67,46 @@ public class FareService
       }
    }
 
-   @PostMapping("/farecalc")
-   private double calculateFare(@RequestBody Instant departureTime, @RequestBody double distanceMi, @RequestBody int seatRow)
-   {
-      // the higher the service level (based on the seat row), the higher the base rate
-      double baseRate = getBaseRate(seatRow);
-
-      // the greater the distance, the higher the fare
-      double distanceFee = distanceMi * 0.1;
-
-      // the closer to the departure date, the higher the fare
-      long daysUntilDeparture = Instant.now().until(departureTime, ChronoUnit.DAYS);
-      double departureTimeFee = (0.0088 * daysUntilDeparture * daysUntilDeparture) - (1.3869 * daysUntilDeparture) + 100;
-
-      return baseRate + distanceFee + departureTimeFee;
+   private double calculateFareNoPersist(Fare postFare){
+      this.persist = false;
+      double out = this.calculateFare(postFare);
+      this.persist = true;
+      return out;
    }
 
-   @PostMapping("/baserates")
-   private double getBaseRate(@RequestBody int seatPosition)
+   @PostMapping(path="/farecalc",consumes = MediaType.APPLICATION_JSON_VALUE)
+//   private double calculateFare(@RequestBody Instant departureTime, @RequestBody double distanceMi, @RequestBody int seatRow)
+   private double calculateFare(@RequestBody Fare postFare)
+   {
+      logger.info(postFare.getDepartureTime().getClass().toString());
+      // the higher the service level (based on the seat row), the higher the base rate
+      double baseRate = getBaseRate(postFare.getSeatRow());
+
+      // the greater the distance, the higher the fare
+      double distanceFee = postFare.getDistanceMi() * 0.1;
+
+      // the closer to the departure date, the higher the fare
+      long daysUntilDeparture = Instant.now().until(postFare.getDepartureTime(), ChronoUnit.DAYS);
+      double departureTimeFee = (0.0088 * daysUntilDeparture * daysUntilDeparture) - (1.3869 * daysUntilDeparture) + 100;
+
+      double calcCost = baseRate + distanceFee + departureTimeFee;
+
+      //Data Access Layer
+      FareId id = new FareId(postFare.getDepartureTime(), postFare.getDistanceMi(), postFare.getSeatRow());
+      Optional<Fare> result = fareRepository.findById(id);
+
+      logger.info("At Persist Layer");
+      if (!result.isPresent() && this.persist) {
+         Fare fare = new Fare(postFare.getDepartureTime(), postFare.getDistanceMi(), postFare.getSeatRow(), calcCost);
+         fareRepository.save(fare);
+         logger.info("Saving new fare: " + fare);
+      }
+
+      return calcCost;
+   }
+
+   @GetMapping("/baserates/{seatPosition}")
+   private double getBaseRate(@PathVariable int seatPosition)
    {
       if (seatPosition < 4)
       {
