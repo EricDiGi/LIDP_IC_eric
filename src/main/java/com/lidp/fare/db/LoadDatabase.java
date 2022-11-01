@@ -3,6 +3,7 @@ package com.lidp.fare.db;
 import com.lidp.fare.dao.FareRepository;
 import com.lidp.fare.domain.Fare;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,6 +11,7 @@ import java.time.Instant;
 import java.util.logging.Logger;
 
 @Configuration
+@ConfigurationProperties(prefix = "spring.datasource.hikari")
 public class LoadDatabase {
     private static final Logger logger = Logger.getLogger(LoadDatabase.class.getName());
 
